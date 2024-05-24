@@ -25,7 +25,7 @@ const ConnectRoom = ({ onConnect }) => {
   };
 
   return (
-    <div>
+    <div className='flex items-center'>
       <button onClick={handleCreateRoom}>Create Room</button>
       <input type="text" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Enter Code" />
       <button onClick={handleJoinRoom}>Join Room</button>

@@ -13,7 +13,7 @@ const VideoChat = ({ room }) => {
 
   useEffect(() => {
     const initSocket = async () => {
-      if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
+      if (typeof navigator !== 'undefined') {
         const socket = io('https://pairpro-flax.vercel.app'); // Update with your server URL
         socketRef.current = socket;
 

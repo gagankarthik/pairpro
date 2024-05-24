@@ -14,7 +14,7 @@ const io = new Server(server, {
 const rooms = {};
 
 io.on('connection', (socket) => {
-  console.log('a user connected', socket.id);
+  console.log('A user connected', socket.id);
 
   socket.on('join', (room) => {
     if (!rooms[room]) {
@@ -28,23 +28,36 @@ io.on('connection', (socket) => {
   });
 
   socket.on('offer', (offer, room) => {
-    socket.to(room).emit('offer', offer);
+    if (rooms[room]) {
+      socket.to(room).emit('offer', offer);
+    } else {
+      console.error(`Room ${room} does not exist`);
+    }
   });
 
   socket.on('answer', (answer, room) => {
-    socket.to(room).emit('answer', answer);
+    if (rooms[room]) {
+      socket.to(room).emit('answer', answer);
+    } else {
+      console.error(`Room ${room} does not exist`);
+    }
   });
 
   socket.on('candidate', (candidate, room) => {
-    socket.to(room).emit('candidate', candidate);
+    if (rooms[room]) {
+      socket.to(room).emit('candidate', candidate);
+    } else {
+      console.error(`Room ${room} does not exist`);
+    }
   });
 
   socket.on('disconnect', () => {
-    console.log('user disconnected', socket.id);
+    console.log('User disconnected', socket.id);
     for (const room in rooms) {
       rooms[room] = rooms[room].filter(id => id !== socket.id);
       if (rooms[room].length === 0) {
         delete rooms[room];
+        console.log(`Room ${room} deleted as it is empty`);
       }
     }
   });
@@ -52,5 +65,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => {
-  console.log(`listening on *:${PORT}`);
+  console.log(`Listening on *:${PORT}`);
 });

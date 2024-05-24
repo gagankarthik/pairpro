@@ -1,36 +1,45 @@
-"use client"
-import { useState } from 'react';
-import { ref, set, get } from 'firebase/database';
+"use client";
+import { useEffect, useState } from 'react';
+import { Controlled as CodeMirror } from 'react-codemirror2';
+import { ref, onValue, set } from 'firebase/database';
 import { database } from '@/firebaseConfig';
+import 'codemirror/lib/codemirror.css';
+import 'codemirror/theme/material.css';
+import 'codemirror/mode/javascript/javascript';
 
-const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+const CodeEditor = ({ room }) => {
+  const [code, setCode] = useState('// Start coding...');
 
-const ConnectRoom = ({ onConnect }) => {
-  const [code, setCode] = useState('');
+  useEffect(() => {
+    const codeRef = ref(database, `rooms/${room}/code`);
+    const unsubscribe = onValue(codeRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setCode(data);
+      }
+    });
 
-  const handleCreateRoom = async () => {
-    const newCode = generateCode();
-    await set(ref(database, `rooms/${newCode}`), { code: newCode });
-    onConnect(newCode);
-  };
+    return () => unsubscribe();
+  }, [room]);
 
-  const handleJoinRoom = async () => {
-    const roomRef = ref(database, `rooms/${code}`);
-    const roomSnapshot = await get(roomRef);
-    if (roomSnapshot.exists()) {
-      onConnect(code);
-    } else {
-      alert('Room does not exist');
-    }
+  const handleCodeChange = (editor, data, value) => {
+    setCode(value);
+    set(ref(database, `rooms/${room}/code`), value);
   };
 
   return (
-    <div>
-      <button onClick={handleCreateRoom}>Create Room</button>
-      <input type="text" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Enter Code" />
-      <button onClick={handleJoinRoom}>Join Room</button>
-    </div>
+    <CodeMirror
+      value={code}
+      options={{
+        mode: 'javascript',
+        theme: 'material',
+        lineNumbers: true,
+        lineWrapping: true,
+      }}
+      onBeforeChange={handleCodeChange}
+      className="h-full"
+    />
   );
 };
 
-export default ConnectRoom;
+export default CodeEditor;

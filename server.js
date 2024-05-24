@@ -11,15 +11,20 @@ const io = new Server(server, {
   },
 });
 
-// Serve static files from the "public" directory
-app.use(express.static(path.join(__dirname, 'public')));
+const rooms = {};
 
 io.on('connection', (socket) => {
   console.log('a user connected', socket.id);
 
   socket.on('join', (room) => {
-    socket.join(room);
-    console.log(`User ${socket.id} joined room ${room}`);
+    if (!rooms[room]) {
+      rooms[room] = [];
+    }
+    if (!rooms[room].includes(socket.id)) {
+      rooms[room].push(socket.id);
+      socket.join(room);
+      console.log(`User ${socket.id} joined room ${room}`);
+    }
   });
 
   socket.on('offer', (offer, room) => {
@@ -35,7 +40,13 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log('user disconnected');
+    console.log('user disconnected', socket.id);
+    for (const room in rooms) {
+      rooms[room] = rooms[room].filter(id => id !== socket.id);
+      if (rooms[room].length === 0) {
+        delete rooms[room];
+      }
+    }
   });
 });
 

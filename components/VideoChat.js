@@ -1,15 +1,17 @@
-"use client"
+"use client";
 import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
+import { Mic, Video } from 'lucide-react';
 
 const VideoChat = ({ room }) => {
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
+  const [peerConnection, setPeerConnection] = useState(null);
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
 
   useEffect(() => {
-    const socket = io('http://localhost:4000');
+    const socket = io('http://localhost:4000'); // Update with your server URL
 
     navigator.mediaDevices.getUserMedia({ video: true, audio: true })
       .then(stream => {
@@ -32,7 +34,9 @@ const VideoChat = ({ room }) => {
       remoteVideoRef.current.srcObject = event.streams[0];
     };
 
-    localStream?.getTracks().forEach(track => pc.addTrack(track, localStream));
+    if (localStream) {
+      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+    }
 
     socket.on('offer', (offer) => {
       pc.setRemoteDescription(new RTCSessionDescription(offer));
@@ -57,7 +61,7 @@ const VideoChat = ({ room }) => {
       socket.disconnect();
       pc.close();
     };
-  }, [room, localStream]);
+  }, [room]);
 
   const toggleVideo = () => {
     const videoTrack = localStream?.getVideoTracks()[0];
@@ -74,12 +78,18 @@ const VideoChat = ({ room }) => {
   };
 
   return (
-    <div>
-      <video ref={localVideoRef} autoPlay muted className="w-full h-auto mb-4"></video>
-      <video ref={remoteVideoRef} autoPlay className="w-full h-auto"></video>
-      <div className="mt-4">
-        <button onClick={toggleVideo} className="mr-2 bg-blue-500 text-white py-1 px-3 rounded">video</button>
-        <button onClick={toggleAudio} className="bg-blue-500 text-white py-1 px-3 rounded"> Audio</button>
+    <div className="flex flex-col items-center w-full h-full">
+      <video ref={localVideoRef} autoPlay muted className="w-full h-1/2 mb-2 rounded"></video>
+      <video ref={remoteVideoRef} autoPlay className="w-full h-1/2 rounded"></video>
+      <div className="mt-4 flex space-x-2">
+        <button onClick={toggleVideo} className="bg-blue-500 text-white py-2 px-4 rounded flex items-center">
+          <Video className="mr-2" />
+          Toggle Video
+        </button>
+        <button onClick={toggleAudio} className="bg-blue-500 text-white py-2 px-4 rounded flex items-center">
+          <Mic className="mr-2" />
+          Toggle Audio
+        </button>
       </div>
     </div>
   );

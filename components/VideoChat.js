@@ -9,57 +9,67 @@ const VideoChat = ({ room }) => {
   const [peerConnection, setPeerConnection] = useState(null);
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const socketRef = useRef(null);
 
   useEffect(() => {
-    const socket = io('http://localhost:4000'); // Update with your server URL
+    const initSocket = async () => {
+      const socket = io('http://localhost:4000'); // Update with your server URL
+      socketRef.current = socket;
 
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then(stream => {
-        setLocalStream(stream);
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      setLocalStream(stream);
+      if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
+      }
+
+      socket.emit('join', room);
+
+      const pc = new RTCPeerConnection();
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit('candidate', event.candidate, room);
+        }
+      };
+
+      pc.ontrack = (event) => {
+        setRemoteStream(event.streams[0]);
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = event.streams[0];
+        }
+      };
+
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+      socket.on('offer', (offer) => {
+        pc.setRemoteDescription(new RTCSessionDescription(offer));
+        pc.createAnswer()
+          .then(answer => {
+            pc.setLocalDescription(answer);
+            socket.emit('answer', answer, room);
+          });
       });
 
-    socket.emit('join', room);
+      socket.on('answer', (answer) => {
+        pc.setRemoteDescription(new RTCSessionDescription(answer));
+      });
 
-    const pc = new RTCPeerConnection();
+      socket.on('candidate', (candidate) => {
+        pc.addIceCandidate(new RTCIceCandidate(candidate));
+      });
 
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        socket.emit('candidate', event.candidate, room);
-      }
+      setPeerConnection(pc);
     };
 
-    pc.ontrack = (event) => {
-      setRemoteStream(event.streams[0]);
-      remoteVideoRef.current.srcObject = event.streams[0];
-    };
-
-    if (localStream) {
-      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-    }
-
-    socket.on('offer', (offer) => {
-      pc.setRemoteDescription(new RTCSessionDescription(offer));
-      pc.createAnswer()
-        .then(answer => {
-          pc.setLocalDescription(answer);
-          socket.emit('answer', answer, room);
-        });
-    });
-
-    socket.on('answer', (answer) => {
-      pc.setRemoteDescription(new RTCSessionDescription(answer));
-    });
-
-    socket.on('candidate', (candidate) => {
-      pc.addIceCandidate(new RTCIceCandidate(candidate));
-    });
-
-    setPeerConnection(pc);
+    initSocket();
 
     return () => {
-      socket.disconnect();
-      pc.close();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+      if (peerConnection) {
+        peerConnection.close();
+      }
     };
   }, [room]);
 

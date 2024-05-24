@@ -1,9 +1,12 @@
 "use client";
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import CodeEditor from '@/components/CodeEditor';
-import VideoChat from '@/components/VideoChat';
 import ConnectRoom from '@/components/ConnectRoom';
 import useAuth from '@/hooks/useAuth';
+
+// Dynamically import VideoChat with no SSR
+const VideoChat = dynamic(() => import('@/components/VideoChat'), { ssr: false });
 
 export default function Home() {
   const user = useAuth();
